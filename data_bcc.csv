@@ -1,0 +1,4 @@
+-- Copie-colle ça dans DBeaver > Execute
+SELECT d.code_devise, cr.numero_compte, cr.solde_actuel, d.nom_devise 
+FROM comptes_reserve cr 
+JOIN devises d ON cr.id_devise = d.id_devise
