@@ -15,10 +15,21 @@ DB_CONFIG = {
 }
 
 def get_data(query):
-    conn = psycopg2.connect(**DB_CONFIG)
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
+    try:
+        # Essai connexion PostgreSQL (si secrets configurés)
+        conn = psycopg2.connect(**DB_CONFIG)
+        df = pd.read_sql(query, conn)
+        conn.close()
+        return df
+    except Exception as e:
+        # Mode secours : utilise data_bcc.csv sur Streamlit Cloud
+        st.warning(f"Mode démo CSV (DB non connectée): {e}")
+        try:
+            df = pd.read_csv("data_bcc.csv")
+            return df
+        except:
+            df = pd.read_csv("data_bcc.csv", encoding='latin-1')
+            return df
 
 menu = st.sidebar.selectbox("Menu BCC", ["TOTAL 24,1M", "SOLDE COMPTES", "DEVISES"])
 
