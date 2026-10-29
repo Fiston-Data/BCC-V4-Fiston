@@ -13,19 +13,23 @@ def get_data():
 
 df = get_data()
 
-st.success("Mode démo CSV - Données BCC 24,1M chargées")
-st.write("Aperçu données :", df)
+st.success("Donnees BCC 24,1M chargees")
+st.dataframe(df, use_container_width=True)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("TOTAL USD", f"${df['usd_equivalent'].sum():,} $")
-col2.metric("Devises", len(df))
-col3.metric("Date", "29/10/2026")
+c1, c2, c3 = st.columns(3)
+c1.metric("TOTAL USD", f"${df['usd_equivalent'].sum():,}")
+c2.metric("Devises", len(df))
+c3.metric("Statut", "En ligne")
 
-fig1 = px.bar(df, x='code_devise', y='usd_equivalent', color='nom_devise', title="Répartition des 24,1M USD par devise")
+fig1 = px.bar(df, x='code_devise', y='usd_equivalent', color='nom_devise', title="Repartition 24,1M par devise")
 st.plotly_chart(fig1, use_container_width=True)
 
-fig2 = px.pie(df, values='usd_equivalent', names='code_devise', title="Part % des 24,1M")
+fig2 = px.pie(df, values='usd_equivalent', names='code_devise', title="Part en %")
 st.plotly_chart(fig2, use_container_width=True)
+
+st.sidebar.title("Menu BCC")
+st.sidebar.metric("TOTAL", "24,1M USD")
+st.sidebar.dataframe(df)
 
 st.sidebar.title("Menu BCC")
 st.sidebar.metric("TOTAL", "24,1M USD")
