@@ -1,58 +1,73 @@
 import streamlit as st
-import psycopg2
 import pandas as pd
 import plotly.express as px
+import psycopg2
 
-st.set_page_config(page_title="BCC V4 - Fiston", layout="wide")
+st.set_page_config(page_title="BCC 24,1M Dashboard", layout="wide")
 st.title("BANQUE CENTRALE DU CONGO - Dashboard 24,1M")
-st.markdown("**BDD reelle : banque_centrale - Fiston NZALAYALA**")
+st.caption("BDD reelle : banque_centrale - Fiston NZALAYALA")
 
 DB_CONFIG = {
     "host": "localhost",
     "database": "banque_centrale",
     "user": "postgres",
-    "password": "6908"  # <--- CHANGE ICI ton mdp postgres
+    "password": "ton_password",
+    "port": "5432"
 }
 
-def get_data(query):
+@st.cache_data
+def get_data():
     try:
-        # Essai connexion PostgreSQL (si secrets configurés)
         conn = psycopg2.connect(**DB_CONFIG)
-        df = pd.read_sql(query, conn)
+        df = pd.read_sql("SELECT * FROM bcc_table", conn)
         conn.close()
+        st.success("Connecté à PostgreSQL")
         return df
     except Exception as e:
-        # Mode secours : utilise data_bcc.csv sur Streamlit Cloud
-        st.warning(f"Mode démo CSV (DB non connectée): {e}")
+        st.warning(f"Mode démo CSV (DB non connectée)")
+        # Charge CSV et normalise les colonnes
         try:
             df = pd.read_csv("data_bcc.csv")
-            return df
         except:
-            df = pd.read_csv("data_bcc.csv", encoding='latin-1')
-            return df
+            df = pd.read_csv("data_bcc.csv", encoding='latin-1', sep=';')
+        
+        # Nettoie les noms de colonnes
+        df.columns = [c.strip().lower().replace(' ', '_') for c in df.columns]
+        return df
 
-menu = st.sidebar.selectbox("Menu BCC", ["TOTAL 24,1M", "SOLDE COMPTES", "DEVISES"])
+df = get_data()
 
-if menu == "TOTAL 24,1M":
-    st.header("TOTAL PAR DEVISE")
-    df = get_data("""
-        SELECT d.code_devise, SUM(cr.solde_actuel) as total
-        FROM comptes_reserve cr
-        JOIN devises d ON cr.id_devise = d.id_devise
-        GROUP BY d.code_devise ORDER BY total DESC
-    """)
-    st.dataframe(df, use_container_width=True)
-    c1,c2 = st.columns(2)
-    c1.metric("TOTAL", f"{df['total'].sum():,.0f} $")
-    c2.metric("NB DEVISES", len(df))
-    st.plotly_chart(px.bar(df, x='code_devise', y='total', color='code_devise', title="Repartition 24,1M"), use_container_width=True)
-    st.plotly_chart(px.pie(df, values='total', names='code_devise'), use_container_width=True)
+st.write("Aperçu données :", df.head())
+st.write("Colonnes :", list(df.columns))
 
-elif menu == "SOLDE COMPTES":
-    df = get_data("SELECT cr.numero_compte, cr.solde_actuel, d.code_devise FROM comptes_reserve cr JOIN devises d ON cr.id_devise=d.id_devise ORDER BY cr.solde_actuel DESC")
-    st.dataframe(df, use_container_width=True)
-    st.metric("Plus gros compte", f"{df.iloc[0]['numero_compte']} - {df.iloc[0]['solde_actuel']:,.0f} {df.iloc[0]['code_devise']}")
+# --- CORRECTION AUTOMATIQUE DES COLONNES ---
+# On cherche la colonne montant
+montant_col = None
+for col in df.columns:
+    if 'montant' in col or 'total' in col or 'value' in col or 'amount' in col:
+        montant_col = col
+        break
+if not montant_col:
+    # prend la première colonne numérique
+    montant_col = df.select_dtypes(include='number').columns[0]
 
-else:
-    df = get_data("SELECT id_devise, code_devise, nom_devise, symbole FROM devises")
-    st.dataframe(df, use_container_width=True)
+devise_col = None
+for col in df.columns:
+    if 'devise' in col or 'currency' in col or 'code' in col:
+        devise_col = col
+        break
+if not devise_col:
+    devise_col = df.columns[0]
+
+st.subheader(f"TOTAL PAR DEVISE - basé sur {montant_col} / {devise_col}")
+
+# Graphiques qui marchent peu importe le nom des colonnes
+fig1 = px.bar(df, x=devise_col, y=montant_col, title=f"Total par {devise_col}")
+st.plotly_chart(fig1, use_container_width=True)
+
+fig2 = px.pie(df, values=montant_col, names=devise_col, title="Répartition")
+st.plotly_chart(fig2, use_container_width=True)
+
+# Menu BCC
+st.sidebar.title("Menu BCC")
+choix = st.sidebar.selectbox("TOTAL 24,1M", [str(x) for x in df[devise_col].unique()[:10]])
