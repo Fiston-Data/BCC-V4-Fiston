@@ -1,4 +1,6 @@
--- Copie-colle ça dans DBeaver > Execute
-SELECT d.code_devise, cr.numero_compte, cr.solde_actuel, d.nom_devise 
-FROM comptes_reserve cr 
-JOIN devises d ON cr.id_devise = d.id_devise
+code_devise,nom_devise,numero_compte,solde_actuel,usd_equivalent,part_24_1m
+USD,Dollar Americain,CR-USD-001,15100000,15100000,62.6
+EUR,Euro,CR-EUR-002,4500000,4860000,20.1
+CNY,Yuan Chinois,CR-CNY-003,12000000,1650000,6.8
+GBP,Livre Sterling,CR-GBP-004,850000,1080000,4.5
+XAU,Or Monetaire,CR-XAU-005,1200,1440000,6.0
